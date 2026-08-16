@@ -11,4 +11,23 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
+# React Native
+-keep class com.facebook.react.** { *; }
+-keepclassmembers class com.facebook.react.** { *; }
+
+# OkHttp
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-keepnames class okhttp3.internal.publicsuffix.PublicSuffixDatabase
+
+# Firebase
+-keep class com.google.firebase.** { *; }
+-keep class com.google.android.gms.** { *; }
+-dontwarn com.google.firebase.**
+-dontwarn com.google.android.gms.**
+
+# Skia
+-keep class org.skia.** { *; }
+-keep class com.shopify.reactnative.skia.** { *; }
+
 # Add any project specific keep options here:
