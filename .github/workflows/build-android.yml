@@ -33,7 +33,7 @@ jobs:
 
       - name: Configure EAS Credentials
         run: |
-          echo "${{ secrets.EAS_TOKEN }}" | eas login --token
+          echo "${{ secrets.EAS_TOKEN }}" | eas login
           
       - name: Create .env file for Build
         run: |
@@ -53,7 +53,6 @@ jobs:
           eas build --platform android --profile production --non-interactive --output dist/financeflow.apk
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-          # Ensure EAS_TOKEN is also set if using different auth method, though EXPO_TOKEN is standard for CI
           
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
