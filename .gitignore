@@ -2,44 +2,19 @@
 # Dependencies
 node_modules/
 
-# Environment variables
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
 .env
 .env.local
 *.env.*
 
-# Logs
-*.log
-
-# IDE files
+# Editors
 .vscode/
 .idea/
 
-# Python cache
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Build outputs
-dist/
-build/
-*.egg-info/
-
-# Temporary files
-*.tmp
-*.swp
-*~
-
-# OS generated files
-.DS_Store
-Thumbs.db
-
-# Coverage reports
-coverage/
-htmlcov/
-.coverage
-
-# Test cache
-.pytest_cache/
-.mypy_cache/
+# Original rules preserved
+*.log
 ```
