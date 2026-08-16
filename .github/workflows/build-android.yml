@@ -45,7 +45,51 @@ jobs:
       - name: Build Android APK (Production)
         id: eas_build
         run: |
-          eas build --platform android --profile production --non-interactive --output dist/financeflow.apk
+          BUILD_OUTPUT=$(eas build --platform android --profile production --non-interactive 2>&1)
+          echo "$BUILD_OUTPUT"
+          
+          # Extract build ID from output
+          BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -oP 'Build ID: \K[a-zA-Z0-9-]+' || true)
+          
+          if [ -n "$BUILD_ID" ]; then
+            echo "Waiting for build $BUILD_ID to complete..."
+            
+            # Poll build status until complete
+            while true; do
+              BUILD_STATUS=$(eas build:view "$BUILD_ID" --json 2>/dev/null || echo '{}')
+              STATUS=$(echo "$BUILD_STATUS" | jq -r '.status // "unknown"')
+              
+              echo "Build status: $STATUS"
+              
+              if [ "$STATUS" = "finished" ]; then
+                echo "Build completed successfully!"
+                
+                # Get artifact URL
+                ARTIFACT_URL=$(echo "$BUILD_STATUS" | jq -r '.artifacts.buildUrl // empty')
+                
+                if [ -n "$ARTIFACT_URL" ]; then
+                  echo "Downloading APK from: $ARTIFACT_URL"
+                  mkdir -p dist
+                  curl -L -o dist/financeflow.apk "$ARTIFACT_URL"
+                  echo "APK downloaded successfully!"
+                else
+                  echo "Warning: Could not find artifact URL in build response"
+                  echo "$BUILD_STATUS"
+                fi
+                break
+              elif [ "$STATUS" = "errored" ] || [ "$STATUS" = "canceled" ]; then
+                echo "Build failed with status: $STATUS"
+                echo "$BUILD_STATUS"
+                exit 1
+              fi
+              
+              echo "Waiting 30 seconds before next status check..."
+              sleep 30
+            done
+          else
+            echo "Warning: Could not extract build ID. Build may still be processing."
+            echo "Check your EAS dashboard for build status."
+          fi
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
 
