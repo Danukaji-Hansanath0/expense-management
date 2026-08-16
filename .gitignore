@@ -1,37 +1,26 @@
 ```
-# Build artifacts
-build/
-*.apk
-*.aar
-*.so
-*.dex
-
 # Dependencies
-.gradle/
 node_modules/
-vendor/
-
-# Logs
+.venv/
+venv/
+__pycache__/
+.mypy_cache/
+.pytest_cache/
+# Build artifacts
+dist/
+build/
+target/
+# Gradle
+.gradle/
+# Logs and temp files
 *.log
-
+*.tmp
+*.swp
 # Environment
 .env
 .env.local
 *.env.*
-
-# IDE
-.idea/
-*.iml
-*.ipr
-*.iws
+# Editors
 .vscode/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Temporary files
-*.tmp
-*.temp
-*~
+.idea/
 ```

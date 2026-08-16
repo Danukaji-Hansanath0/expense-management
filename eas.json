@@ -16,10 +16,13 @@
     },
     "production": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "image": "latest",
+        "resourceClass": "medium"
       },
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_NO_TELEMETRY": "1"
       }
     }
   },
