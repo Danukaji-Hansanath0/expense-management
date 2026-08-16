@@ -6,11 +6,13 @@ on:
   workflow_dispatch: # Allows manual trigger
 
 jobs:
-  build:
+  build-apk:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,14 +23,17 @@ jobs:
       - name: Install Dependencies
         run: npm ci --legacy-peer-deps
 
-      - name: Setup EAS
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Setup Expo & EAS
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
-      - name: Create .env file
+      - name: Create Environment File
         run: |
           echo "EXPO_PUBLIC_FB_API_KEY=${{ secrets.FB_API_KEY }}" >> .env
           echo "EXPO_PUBLIC_FB_AUTH_DOMAIN=${{ secrets.FB_AUTH_DOMAIN }}" >> .env
@@ -37,84 +42,92 @@ jobs:
           echo "EXPO_PUBLIC_FB_MESSAGING_SENDER_ID=${{ secrets.FB_MESSAGING_SENDER_ID }}" >> .env
           echo "EXPO_PUBLIC_FB_APP_ID=${{ secrets.FB_APP_ID }}" >> .env
           echo "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=${{ secrets.GOOGLE_WEB_CLIENT_ID }}" >> .env
-          cat .env
+
+      - name: Link/Create EAS Project
+        run: |
+          # Try to init non-interactively. 
+          # If project exists, it links. If not, it creates a new one under your account.
+          eas init --id $(echo ${{ secrets.EXPO_PROJECT_ID }} | tr -d ' ') --non-interactive || \
+          eas init --account danukaji --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Configure EAS Build
+        run: |
+          # Ensure eas.json exists or create a basic one if missing
+          if [ ! -f eas.json ]; then
+            echo '{"cli": {"appVersionSource": "remote"}, "build": {"production": {"android": {"buildType": "apk"}}}}' > eas.json
+          fi
 
       - name: Start EAS Build
         id: start_build
         run: |
           echo "Starting EAS Build..."
-          # Run build and capture output to a file to avoid buffering issues
-          eas build --platform android --profile production --non-interactive > build_output.txt 2>&1 || true
+          # Run build and capture output to a file
+          eas build --platform android --profile production --non-interactive > build_log.txt 2>&1 || true
           
-          cat build_output.txt
+          cat build_log.txt
           
-          # Extract Build ID using regex (works even if output has extra text)
-          BUILD_ID=$(grep -oP 'Build ID: \K[a-zA-Z0-9-]+' build_output.txt | head -n 1)
+          # Extract Build ID using grep
+          BUILD_ID=$(grep -oP 'Build ID: \K[a-zA-Z0-9-]+' build_log.txt || echo "")
           
           if [ -z "$BUILD_ID" ]; then
-            echo "❌ Failed to extract Build ID. Check build_output.txt for errors."
+            echo "❌ Failed to extract Build ID."
             exit 1
           fi
           
-          echo "✅ Build started! ID: $BUILD_ID"
           echo "build_id=$BUILD_ID" >> $GITHUB_OUTPUT
+          echo "✅ Build started with ID: $BUILD_ID"
 
-      - name: Wait for Build to Complete
-        id: wait_build
+      - name: Wait for Build & Download
         run: |
-          BUILD_ID="${{ steps.start_build.outputs.build_id }}"
-          echo "⏳ Waiting for build $BUILD_ID to complete..."
+          BUILD_ID=${{ steps.start_build.outputs.build_id }}
+          echo "Monitoring build $BUILD_ID..."
           
-          # Poll every 45 seconds
-          while true; do
-            sleep 45
+          MAX_ATTEMPTS=60 # 30 minutes max
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            sleep 30
+            ATTEMPT=$((ATTEMPT + 1))
             
-            # Get build status
-            STATUS_OUTPUT=$(eas build:view $BUILD_ID --json 2>&1)
-            STATUS=$(echo "$STATUS_OUTPUT" | jq -r '.status // "unknown"')
+            # Get status JSON
+            STATUS_JSON=$(eas build:view $BUILD_ID --json 2>/dev/null || echo "{}")
+            STATUS=$(echo $STATUS_JSON | jq -r '.status // "unknown"')
             
-            echo "Current Status: $STATUS"
+            echo "Attempt $ATTEMPT: Status is $STATUS"
             
             if [ "$STATUS" == "finished" ]; then
-              echo "✅ Build finished successfully!"
-              echo "status=finished" >> $GITHUB_OUTPUT
+              echo "✅ Build finished!"
               
-              # Extract Download URL
-              APK_URL=$(echo "$STATUS_OUTPUT" | jq -r '.artifacts.buildUrl // empty')
+              # Extract URL
+              APK_URL=$(echo $STATUS_JSON | jq -r '.artifacts.buildUrl // empty')
+              
               if [ -n "$APK_URL" ]; then
-                echo "apk_url=$APK_URL" >> $GITHUB_OUTPUT
+                mkdir -p dist
+                echo "Downloading APK..."
+                curl -L -o dist/financeflow.apk "$APK_URL"
+                echo "✅ APK downloaded successfully!"
+                ls -lh dist/
               else
-                echo "❌ Build finished but no download URL found."
+                echo "❌ No download URL found in response."
                 exit 1
               fi
               break
             elif [ "$STATUS" == "errored" ] || [ "$STATUS" == "canceled" ]; then
               echo "❌ Build failed with status: $STATUS"
-              echo "$STATUS_OUTPUT"
               exit 1
-            elif [ "$STATUS" == "unknown" ]; then
-              echo "⚠️ Could not parse status. Retrying..."
             fi
           done
-
-      - name: Download APK
-        run: |
-          APK_URL="${{ steps.wait_build.outputs.apk_url }}"
-          echo "📥 Downloading APK from: $APK_URL"
-          mkdir -p dist
-          curl -L -o dist/financeflow.apk "$APK_URL"
           
-          if [ -f dist/financeflow.apk ]; then
-            echo "✅ APK downloaded successfully!"
-            ls -lh dist/
-          else
-            echo "❌ Failed to download APK."
+          if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+            echo "⏱️ Timeout waiting for build."
             exit 1
           fi
 
-      - name: Upload Artifact
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: financeflow-apk
+          name: FinanceFlow-Production-APK
           path: dist/financeflow.apk
           retention-days: 30
