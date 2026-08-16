@@ -20,27 +20,26 @@ venv/
 __pycache__/
 .mypy_cache/
 .pytest_cache/
-coverage/
-htmlcov/
-*.coverage
+.julia/
+zig-cache/
+zig-out/
 
 # Build artifacts
 dist/
 build/
 target/
-*.pyc
-*.class
 *.o
+*.obj
 *.exe
 *.dll
 *.so
 *.a
-*.obj
-*.out
+*.pyc
 
-# System files
-.DS_Store
-Thumbs.db
+# Coverage reports
+coverage/
+htmlcov/
+.coverage
 
 # Compressed files
 *.zip
@@ -65,4 +64,8 @@ Thumbs.db
 *.tar.bz2
 *.tar.xz
 *.tar.zst
+
+# System files
+.DS_Store
+Thumbs.db
 ```
