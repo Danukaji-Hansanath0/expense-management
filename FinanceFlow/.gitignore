@@ -1,0 +1,56 @@
+# Dependencies
+node_modules/
+.expo/
+.expo-shared/
+dist/
+npm-debug.*
+yarn-error.log
+
+# Environment variables (CRITICAL - never commit these!)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.env
+
+# Build outputs
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+web-build/
+
+# Metro
+.metro-health-check*
+
+# Temporary files
+*.swp
+*.swo
+*~
+.DS_Store
+*.log
+
+# Firebase
+.firebase/
+firestore-debug.log
+firebase-debug.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Testing
+coverage/
+
+# EAS
+eas.json.backup
+
+# Secrets (never commit!)
+*-secret-*.json
+serviceAccountKey.json
+google-services.json
+GoogleService-Info.plist
